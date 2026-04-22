@@ -89,9 +89,10 @@ export class Comfy {
 	 */
 	private async init(): Promise<boolean> {
 		try {
-			await fetch(`http://localhost:${this.PORT}`, { method: "HEAD" });
-			clog(`😯 Something is running on the ComfyUI port: ${this.PORT}, but it isn't ComfyUI. Please close whatever it is and try again...`, "Error");
-			return false;
+			const res = await fetch(`http://localhost:${this.PORT}`, { method: "HEAD" });
+			if (!res.ok) {
+				clog(`😯 Something is running on the ComfyUI port: ${this.PORT}, but it isn't ComfyUI. Please close whatever it is and try again...`, "Error");
+			} else return false;
 		} catch {
 			this._proc ??= new Deno.Command("python", { args: [path.join(this.comfyFolder, "main.py"), "--listen", "0.0.0.0", "--port", this.PORT.toString()], stdout: "piped", stderr: "piped" }).spawn();
 			this.onProcReady(this._proc);
