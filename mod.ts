@@ -15,6 +15,9 @@ async function streamLogger(reader: ReadableStreamDefaultReader<Uint8Array<Array
 	}
 }
 
+/**
+ * An instance of a ComfyUI process. Or the API for an alrady running ComfyUI server.
+ */
 export class Comfy {
 	/**
 	 * A class that manages a ComfyUI server. The server can also be running externally on the specified port and this class will still work.
@@ -71,7 +74,7 @@ export class Comfy {
 	 * @param workflow The workflow prompt.
 	 * @returns A comfy prompt reponse including the prompt id for managing output.
 	 */
-	async prompt(workflow: Record<string, any>): Promise<ComfyPromptResponse> {
+	async prompt(workflow: Workflow): Promise<ComfyPromptResponse> {
 		await this.serverReady();
 		return await (await fetch(`http://localhost:${this.PORT}/prompt`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: workflow }) })).json();
 	}
@@ -99,28 +102,57 @@ export class Comfy {
 	private stderrReader: Promise<void> | null = null;
 	private stdoutReader: Promise<void> | null = null;
 
+	/**
+	 * Code to run when proc is running.
+	 */
 	private onProcReady(proc: Deno.ChildProcess) {
 		this.stderrReader = streamLogger(proc.stderr.getReader());
 		this.stdoutReader = streamLogger(proc.stdout.getReader());
 	}
 }
 
+/**
+ * The response shape from polling the history of a prompt id.
+ */
 export type ComfyHistoryResponse = Record<string, ComfyHistoryEntry>;
 
-interface ComfyHistoryEntry {
+/**
+ * The shape of a response from the history endpoint.
+ */
+export interface ComfyHistoryEntry {
+	/**
+	 * The original prompt.
+	 */
 	prompt: ComfyPromptTuple;
+	/**
+	 * Outputs from this job.
+	 */
 	outputs?: Record<string, ComfyNodeOutput>;
+	/**
+	 * The status of this job.
+	 */
 	status?: ComfyExecutionStatus;
 }
 
-type ComfyPromptTuple = [
+/**
+ * The prompt tuple collection in history. Includes the original configuration.
+ *
+ * - queue position
+ * - prompt id
+ * - original workflow
+ * - extra metadata
+ */
+export type ComfyPromptTuple = [
 	number, // queue index
 	string, // prompt_id
-	ComfyWorkflowDefinition,
+	Workflow,
 	Record<string, unknown> // extra metadata (often empty)
 ];
 
-type ComfyWorkflowDefinition = Record<
+/**
+ * A workflow to prompt the server with.
+ */
+export type Workflow = Record<
 	string, // node id
 	{
 		inputs: Record<string, unknown>;
@@ -131,29 +163,83 @@ type ComfyWorkflowDefinition = Record<
 	}
 >;
 
-interface ComfyNodeOutput {
+/**
+ * Specifies the output of "output" nodes in the workflow.
+ */
+export interface ComfyNodeOutput {
+	/**
+	 * Any image output of this node.
+	 */
 	images?: ComfyImageOutput[];
+	/**
+	 * Any gif output of this node.
+	 */
 	gifs?: ComfyImageOutput[];
+	/**
+	 * Any audio output of this node.
+	 */
 	audio?: ComfyAudioOutput[];
+	/**
+	 * Any text output of this node.
+	 */
 	text?: string[];
-	[key: string]: unknown; // allow custom node outputs
+	/**
+	 * Just to allow custom outputs.
+	 */
+	[key: string]: unknown;
 }
 
-interface ComfyImageOutput {
+/**
+ * An image output collection. Specifies the location of generated images.
+ */
+export interface ComfyImageOutput {
+	/**
+	 * The image basename.
+	 */
 	filename: string;
+	/**
+	 * The subfolder of the "output" folder to find this image.
+	 */
 	subfolder: string;
-	type: string; // usually "output"
-}
-
-interface ComfyAudioOutput {
-	filename: string;
-	subfolder: string;
+	/**
+	 * This will almost always be "output".
+	 */
 	type: string;
 }
 
-interface ComfyExecutionStatus {
+/**
+ * An audio output collection. Specifies the location of generated audio.
+ */
+export interface ComfyAudioOutput {
+	/**
+	 * The basename of the audio file.
+	 */
+	filename: string;
+	/**
+	 * The subfolder of the "output" folder to find this audio.
+	 */
+	subfolder: string;
+	/**
+	 * This will almost always be "output".
+	 */
+	type: string;
+}
+
+/**
+ * The execution status of a job.
+ */
+export interface ComfyExecutionStatus {
+	/**
+	 * Generic status string.
+	 */
 	status_str: "success" | "error" | string;
+	/**
+	 * Job complete.
+	 */
 	completed: boolean;
+	/**
+	 * Additional messages about the job.
+	 */
 	messages?: string[];
 }
 
@@ -164,8 +250,17 @@ interface ComfyExecutionStatus {
  * when a workflow is successfully queued.
  */
 export interface ComfyPromptResponse {
+	/**
+	 * The id of the queued prompt.
+	 */
 	prompt_id: string;
-	number: number; // queue position
+	/**
+	 * Bad naming by ComfyUI, but this is the queue position of the prompt.
+	 */
+	number: number;
+	/**
+	 * A collection of errors for nodes.
+	 */
 	node_errors?: ComfyNodeErrors;
 }
 
@@ -173,19 +268,40 @@ export interface ComfyPromptResponse {
  * Map of node id -> error information.
  * Present if validation fails for one or more nodes.
  */
-type ComfyNodeErrors = Record<string, ComfyNodeError>;
+export type ComfyNodeErrors = Record<string, ComfyNodeError>;
 
-interface ComfyNodeError {
+/**
+ * A ComfyUI response interface for errors relating to nodes.
+ */
+export interface ComfyNodeError {
+	/**
+	 * The errors themselves.
+	 */
 	errors: ComfyNodeValidationError[];
+	/**
+	 * A list of the inputs that rely on this node's output.
+	 */
 	dependent_outputs?: string[];
+	/**
+	 * The class type of the erroring node.
+	 */
 	class_type?: string;
 }
 
 /**
  * Individual validation error entry.
  */
-interface ComfyNodeValidationError {
-	type: string; // e.g. "invalid_input"
-	message: string; // human-readable error message
-	details?: unknown; // additional error context
+export interface ComfyNodeValidationError {
+	/**
+	 * The error type.
+	 */
+	type: string;
+	/**
+	 * Human readable error context.
+	 */
+	message: string;
+	/**
+	 * Potential additional context.
+	 */
+	details?: any;
 }

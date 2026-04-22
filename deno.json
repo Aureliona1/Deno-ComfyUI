@@ -1,0 +1,26 @@
+{
+  "imports": {
+    "@aurellis/helpers": "jsr:@aurellis/helpers@^1.4.12",
+    "@std/path": "jsr:@std/path@^1.1.4"
+  },
+  "exports": "./mod.ts",
+  "lint": {
+    "include": [
+      "mod.ts"
+    ],
+    "rules": {
+      "tags": [
+        "jsr"
+      ]
+    }
+  },
+  "tasks": {
+    "commit": {
+      "description": "Run pre-commit checks.",
+      "command": "deno doc --lint mod.ts && deno lint"
+    }
+  },
+  "name": "@aurellis/deno-comfyui",
+  "version": "1.0.1",
+  "license": "MIT"
+}
