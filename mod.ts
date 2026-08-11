@@ -16,17 +16,17 @@ async function streamLogger(reader: ReadableStreamDefaultReader<Uint8Array<Array
 }
 
 /**
- * An instance of a ComfyUI process. Or the API for an alrady running ComfyUI server.
+ * An instance of a ComfyUI process. Or the API for an already running ComfyUI server.
  */
 export class Comfy {
 	/**
 	 * A class that manages a ComfyUI server. The server can also be running externally on the specified port and this class will still work.
 	 * This constructor will signal the server to be initialised if it isn't already, but will not wait for the initialisation to finish.
-	 * @param comfyFolder The relative folder to the ComfyUI install, do not provide the path to main.py, just the folder that it is in.
+	 * @param comfyFolder The relative folder to the ComfyUI install, do not provide the path to main.py, just the folder that it is in. Leave blank to force comfy to run externally.
 	 * @param PORT The port to run the server on, or that a server is currently already running on.
 	 */
 	constructor(
-		private readonly comfyFolder: string,
+		private readonly comfyFolder?: string,
 		readonly PORT = 8000
 	) {
 		this.init();
@@ -94,9 +94,11 @@ export class Comfy {
 				clog(`😯 Something is running on the ComfyUI port: ${this.PORT}, but it isn't ComfyUI. Please close whatever it is and try again...`, "Error");
 			} else return false;
 		} catch {
-			if (this._proc === null) {
+			if (this._proc === null && this.comfyFolder) {
 				this._proc = new Deno.Command("python", { args: [path.join(this.comfyFolder, "main.py"), "--listen", "0.0.0.0", "--port", this.PORT.toString()], stdout: "piped", stderr: "piped" }).spawn();
 				this.onProcReady(this._proc);
+			} else {
+				clog("ComfyUI is not running and you haven't specified an installation path. ComfyUI will not be launched by this process and no methods will resolve until it is launched externally.", "Warning");
 			}
 		}
 		return true;
