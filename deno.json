@@ -1,7 +1,7 @@
 {
   "imports": {
-    "@aurellis/helpers": "jsr:@aurellis/helpers@^1.4.12",
-    "@std/path": "jsr:@std/path@^1.1.4"
+    "@aurellis/helpers": "jsr:@aurellis/helpers@^1.5.6",
+    "@std/path": "jsr:@std/path@^1.1.6"
   },
   "exports": "./mod.ts",
   "lint": {
