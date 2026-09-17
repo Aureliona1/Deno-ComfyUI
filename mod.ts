@@ -80,6 +80,26 @@ export class Comfy {
 	}
 
 	/**
+	 * Unloads loaded models and frees cached VRAM used by ComfyUI.
+	 */
+	async freeModels(): Promise<void> {
+		await this.serverReady();
+
+		const res = await fetch(`http://localhost:${this.PORT}/free`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				unload_models: true,
+				free_memory: true
+			})
+		});
+
+		if (!res.ok) {
+			throw new Error(`Failed to free ComfyUI models: ${res.status} ${res.statusText}`);
+		}
+	}
+
+	/**
 	 * Managed process.
 	 */
 	private _proc: Deno.ChildProcess | null = null;
