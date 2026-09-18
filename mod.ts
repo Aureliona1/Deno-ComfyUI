@@ -45,9 +45,10 @@ export class Comfy {
 	/**
 	 * Waits until the server is running, or any other server is responding on the ComfyUI port.
 	 * @param pollRate The rate in ms to poll the server.
+	 * @param quiet Whether to silence error logs. (Default - false)
 	 */
-	async serverReady(pollRate = 500) {
-		await this.init();
+	async serverReady(pollRate = 500, quiet = false) {
+		await this.init(quiet);
 		let alive = false;
 		while (!alive) {
 			try {
@@ -72,7 +73,7 @@ export class Comfy {
 	/**
 	 * Prompt ComfyUI with a workflow.
 	 * @param workflow The workflow prompt.
-	 * @returns A comfy prompt reponse including the prompt id for managing output.
+	 * @returns A comfy prompt response including the prompt id for managing output.
 	 */
 	async prompt(workflow: Workflow): Promise<ComfyPromptResponse> {
 		await this.serverReady();
@@ -106,19 +107,20 @@ export class Comfy {
 
 	/**
 	 * Ensures that something is running on the specified port. Returns false if that thing isn't a managed ComfyUI process.
+	 * @param quiet Whether to silence errors in init. (Default - false)
 	 */
-	private async init(): Promise<boolean> {
+	private async init(quiet = false): Promise<boolean> {
 		try {
 			const res = await fetch(`http://localhost:${this.PORT}`, { method: "HEAD" });
 			if (!res.ok) {
-				clog(`😯 Something is running on the ComfyUI port: ${this.PORT}, but it isn't ComfyUI. Please close whatever it is and try again...`, "Error");
+				if (!quiet) clog(`😯 Something is running on the ComfyUI port: ${this.PORT}, but it isn't ComfyUI. Please close whatever it is and try again...`, "Error");
 			} else return false;
 		} catch {
 			if (this._proc === null && this.comfyFolder) {
 				this._proc = new Deno.Command("python", { args: [path.join(this.comfyFolder, "main.py"), "--listen", "0.0.0.0", "--port", this.PORT.toString()], stdout: "piped", stderr: "piped" }).spawn();
 				this.onProcReady(this._proc);
 			} else {
-				clog("ComfyUI is not running and you haven't specified an installation path. ComfyUI will not be launched by this process and no methods will resolve until it is launched externally.", "Warning");
+				if (!quiet) clog("ComfyUI is not running and you haven't specified an installation path. ComfyUI will not be launched by this process and no methods will resolve until it is launched externally.", "Warning");
 			}
 		}
 		return true;
