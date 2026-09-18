@@ -27,9 +27,10 @@ export class Comfy {
 	 */
 	constructor(
 		private readonly comfyFolder?: string,
-		readonly PORT = 8000
+		readonly PORT = 8000,
+		quietInit = false
 	) {
-		this.init();
+		this.init(quietInit);
 	}
 
 	/**
